@@ -1,6 +1,6 @@
 {
 	"name": "vector-bloom",
-	"version": "0.1.1",
+	"version": "1.0.0",
 	"source": "src/vector-bloom.js",
 	"main": "dist/vector-bloom.js",
 	"module": "dist/vector-bloom.module.js",

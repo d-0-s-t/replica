@@ -39,24 +39,77 @@ const currentConfig = {
 		}]
 	}
 }
-currentFlower = new VectorBloom(currentConfig, emptyDivContainer)
+currentFlower = new VectorBloom(currentConfig)
 ```
 
-Stroke, fills and shadow effects are possible with additional config. Check flower configs in the examples folder (or check the type files) for additional config options.
+For additional help with flower configurations:
+1. Check flower configs in the examples folder 
+2. Check type files
+3. Use the [generator](https://d0st.me/art/flowers) (recommended)
+
+Draw flower inside html element:
 
 ```
-//render flower as svg inside a dom element
-currentFlower.drawSVG(container)
+htmlDivElement.appendChild(currentFlower.svgElement)
+```
+To draw the same flower multiple times you can either create new VectorBloom objects or cloneNode on flower's svg element:
 
-//modified just the colour, stroke and shadow effects?
-currentFlower.applyStyles()
-
-//get Flower as pretty JSON
-currentFlower.getJSON()
-
-//get Flower as svg. This svg can be saved as a file to be edited in any Vector Graphics Editing tool.
-currentFlower.getSVG()
+```
+htmlDivElement.appendChild(currentFlower.svgElement.cloneNode(true))
 ```
 
+Flowers can also be rendered on a canvas. This is useful when svg rendering is slowing down the page. 
 
+```
+currentFlower.renderOnCanvas(canvasElement)
+```
 
+By default flowers are rendered at the center of canvas element. But this can be changed by passing additional parameters to the renderOnCanvas method:
+```
+//This will render a 60px*60px flower at 100px left and 50px top
+currentFlower.renderOnCanvas(canvasElement, 100, 50, 60, 60)
+```
+
+Update Methods after config change:
+```
+//To update flower after config change
+currentFlower.update()
+
+//update only geometry?
+currentFlower.updateGeometry()
+
+//updated only styles?
+currentFlower.updateStyles()
+
+//Sometimes you may want to update the bounds of the flower to fit the drawing correctly
+currentFlower.updateDrawingSize()
+```
+
+Export Methods:
+```
+//export flower as svg string
+currentFlower.export("svgString")
+
+/**
+* Export flower as file string. This basically adds an xml header to the svg string.
+* This is useful in exporting the flower as an svg file for further editing in a 
+* Vector graphics tool like inkscape.
+*/
+currentFlower.export("svgFileString")
+
+//export image url. This url can be directly set to an image element's src attribute.
+currentFlower.export("imageURL")
+
+//export as pretty JSON string.
+currentFlower.export("jsonString")
+```
+
+# Development
+
+Uses parcel to create commonjs and module js files. After working with the source files, create assets for package consumption using:
+
+```
+npm run build 
+```
+
+This will generate the js files inside a **dist** directory with type files (yes from js).

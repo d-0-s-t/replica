@@ -139,59 +139,52 @@ declare module "vector-bloom" {
         static FillDefaults(config: BloomConfig): void;
         /**
          * @param {BloomConfig} config
-         * @param {HTMLElement} [container]
          */
-        constructor(config: BloomConfig, container?: HTMLElement);
+        constructor(config: BloomConfig);
+        /**
+         * Assign a unique id to this flower so that the elements created have unique
+         * id names and classes.
+         */
+        id: string;
         petals: VectorBloomPath[][];
         center: CenterArrangement[];
         backgrounds: SVGCircleElement[];
         config: BloomConfig;
-        currentContainer: HTMLElement;
-        zoomLevel: number;
         svgElement: SVGSVGElement;
-        drawingWidth: number;
+        maxWidth: number;
         /**
-         * assign a unique id to this flower so that the elements created
-         * do not have overlapping ids. Hope this is enough
+         * Currently update and create are the same function
+         * Use this to update only geometry
          */
-        flowerID: string;
-        createElements(): void;
+        updateGeometry(): void;
         /**
-         * @param {HTMLElement} container
+         * Currently update and create are the same function.
+         * Use this to update only styles. Useful when only file, stroke or gradient is changed
          */
-        drawSVG(container: HTMLElement): void;
-        applyStyles(): void;
+        updateStyles(): void;
         /**
-         * @param {boolean} [download]
+         * Updates geometry and styles.
+         */
+        update(): void;
+        /**
+         * By default the flower is drawn in the center of the passed canvas.
+         * @param {HTMLCanvasElement} canvas
+         * @param {number} [x] - left position in pixels
+         * @param {number} [y] - top position in pixels
+         * @param {number} [w] - width in pixels
+         * @param {number} [h] - height in pixels
+         */
+        renderOnCanvas(canvas: HTMLCanvasElement, x?: number, y?: number, w?: number, h?: number): void;
+        /**
+         * @param {"svgString"|"svgFileString"|"imageURL"|"jsonString"} exportType
          * @returns {string}
          */
-        getSVG(download?: boolean): string;
+        export(exportType: "svgString" | "svgFileString" | "imageURL" | "jsonString"): string;
         /**
-         * @param {boolean} download
-         * @returns {string}
+         * This is useful sometimes to update the bounds of the svg to correctly contain
+         * the flower in the container.
          */
-        getJSON(download: boolean): string;
-        fitDrawing(): void;
-        /**
-         * @param {number} zoom
-         */
-        zoomDrawing(zoom: number): void;
-        /**
-         * @param {number} index
-         */
-        highlightPetal(index: number): void;
-        /**
-         * @param {number} index
-         */
-        unhighlightPetal(index: number): void;
-        /**
-         * @param {number} index
-         */
-        highlightCenter(index: number): void;
-        /**
-         * @param {number} index
-         */
-        unhighlightCenter(index: number): void;
+        updateDrawingSize(): void;
     }
     export type CenterArrangement = {
         bases: VectorBloomPath[];
@@ -205,7 +198,7 @@ declare module "vector-bloom" {
     };
     export type BloomConfig = {
         petals: PetalConfig[];
-        center?: CenterConfig[];
+        center?: CenterConfig;
     };
     export type CenterConfig = {
         /**
@@ -248,15 +241,45 @@ declare module "vector-bloom" {
         offset?: number;
     };
     export type PetalGeometry = {
+        /**
+         * The width of the petal at the center
+         */
         width: number;
+        /**
+         * The number of petals
+         */
         count: number;
         length: number;
+        /**
+         * The width of the petal at the radial origin
+         */
         innerWidth?: number;
+        /**
+         * The width of the petal at the outer edge
+         */
         outerWidth?: number;
+        /**
+         * Rotate the petal arrangement. In degrees
+         */
         angleOffset?: number;
+        /**
+         * The radial offset from the center component. This is considered
+         * as factor of center radius. Sensible values are -1 to 1
+         */
         radialOffset?: number;
+        /**
+         * The point where the center balance of the petal is considered. Sensible
+         * values are in the range [0, 1]. This affects how the width value is treated
+         */
         balance?: number;
+        /**
+         * The pointness of the petal. Sensible values are from 0 - very pointy to
+         * 1 - overlysmooth (this results in pointiness too)
+         */
         smoothing?: number;
+        /**
+         * Extend the outer edge of the metal to form a smooth curve
+         */
         extendOutside?: boolean;
         offsetX?: number;
         offsetY?: number;
@@ -292,7 +315,8 @@ declare module "vector-bloom" {
          */
         range?: Array<number>;
         /**
-         * How closely the center elements are packed
+         * How closely the center elements are packed. Lower value results in
+         * higher density.
          */
         density: number;
         /**

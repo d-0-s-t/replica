@@ -214,7 +214,7 @@ class $a124a4be495d40a7$export$49e3432e3d0b046c {
 /**
  * @typedef BloomConfig
  * @property {PetalConfig[]} petals
- * @property {CenterConfig[]} [center]
+ * @property {CenterConfig} [center]
  */ /**
  * @typedef CenterConfig
  * @property {number} radius The radius of the flower center
@@ -242,16 +242,19 @@ class $a124a4be495d40a7$export$49e3432e3d0b046c {
  * @property {number} [offset]
  */ /** 
  * @typedef PetalGeometry
- * @property {number} width
- * @property {number} count
- * @property {number} length
- * @property {number} [innerWidth]
- * @property {number} [outerWidth]
- * @property {number} [angleOffset]
- * @property {number} [radialOffset]
- * @property {number} [balance]
- * @property {number} [smoothing]
- * @property {boolean} [extendOutside]
+ * @property {number} width The width of the petal at the center
+ * @property {number} count The number of petals
+ * @property {number} length 
+ * @property {number} [innerWidth] The width of the petal at the radial origin
+ * @property {number} [outerWidth] The width of the petal at the outer edge
+ * @property {number} [angleOffset] Rotate the petal arrangement. In degrees
+ * @property {number} [radialOffset] The radial offset from the center component. This is considered
+ * as factor of center radius. Sensible values are -1 to 1
+ * @property {number} [balance] The point where the center balance of the petal is considered. Sensible
+ * values are in the range [0, 1]. This affects how the width value is treated
+ * @property {number} [smoothing] The pointness of the petal. Sensible values are from 0 - very pointy to
+ * 1 - overlysmooth (this results in pointiness too)
+ * @property {boolean} [extendOutside] Extend the outer edge of the metal to form a smooth curve
  * @property {number} [offsetX]
  * @property {number} [offsetY]
  */ /** 
@@ -273,43 +276,43 @@ class $a124a4be495d40a7$export$49e3432e3d0b046c {
  * @property {Array<number>} [range] Range is the percentage range of center to occupy. Array length is 2
  * ex: [0,1] occupies the full center
  * [0.75, 1] occupies outer 25 percent of the center radius
- * @property {number} density How closely the center elements are packed
+ * @property {number} density How closely the center elements are packed. Lower value results in
+ * higher density.
  * @property {Array<number>} size Linearly mapped along radius. Array length is 2
  */ const $2fc098c386365677$var$GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2;
 const $2fc098c386365677$var$GOLDEN_RADIANS = 2 * (Math.PI - $2fc098c386365677$var$GOLDEN_RATIO * Math.PI / (1 + $2fc098c386365677$var$GOLDEN_RATIO));
-const $2fc098c386365677$var$DEFAULT_PAGE_SIZE = 512;
 class $2fc098c386365677$export$5a1d4940b51d91ff {
     /**
 	 * @param {BloomConfig} config 
-	 * @param {HTMLElement} [container]
-	 */ constructor(config, container){
+	 */ constructor(config){
+        /**
+		 * Assign a unique id to this flower so that the elements created have unique
+		 * id names and classes.
+		 */ this.id = (Math.random() + "").replace(".", "");
         $2fc098c386365677$export$5a1d4940b51d91ff.FillDefaults(config);
         this.petals = [];
         this.center = [];
         this.backgrounds = [];
         this.config = config;
-        this.currentContainer = container;
-        this.zoomLevel = 1;
+        this.svgElement = $2fc098c386365677$var$createSVGElement();
+        this.maxWidth = 100;
+        let zoomLevel = 1;
         const _this = this;
-        this.svgElement = $2fc098c386365677$var$createSVGElement($2fc098c386365677$var$DEFAULT_PAGE_SIZE);
-        this.drawingWidth = $2fc098c386365677$var$DEFAULT_PAGE_SIZE;
-        /**
-		 * assign a unique id to this flower so that the elements created 
-		 * do not have overlapping ids. Hope this is enough
-		 */ this.flowerID = (Math.random() + "").replace(".", "");
         this.svgElement.addEventListener("wheel", function(/** @type {WheelEvent} */ event) {
             event.preventDefault();
-            _this.zoomLevel += event.deltaY * 0.001;
-            _this.zoomLevel = Math.max(0.1, Math.min(_this.zoomLevel, 5));
-            _this.zoomDrawing(_this.zoomLevel);
+            zoomLevel += event.deltaY * 0.001;
+            zoomLevel = Math.max(0.1, Math.min(zoomLevel, 5));
+            const zoomedWidth = _this.maxWidth * zoomLevel;
+            const difference = (_this.maxWidth - zoomedWidth) / 2;
+            _this.svgElement.setAttribute("viewBox", `${difference} ${difference} ${zoomedWidth} ${zoomedWidth}`);
         });
-        this.createElements();
-        if (this.currentContainer) {
-            this.drawSVG(this.currentContainer);
-            this.fitDrawing();
-        }
+        this.update();
+        this.updateDrawingSize();
     }
-    createElements() {
+    /**
+	 * Currently update and create are the same function
+	 * Use this to update only geometry
+	 */ updateGeometry() {
         this.petals.length = 0;
         this.center.length = 0;
         this.backgrounds.length = 0;
@@ -327,12 +330,6 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
             const r2 = parseFloat(c2.getAttribute("r"));
             return r2 - r1;
         });
-    }
-    /**
-	 * @param {HTMLElement} container 
-	 */ drawSVG(container) {
-        if (container) this.currentContainer = container;
-        container.appendChild(this.svgElement);
         const elementsInsertionTarget = this.svgElement.querySelector("g");
         elementsInsertionTarget.innerHTML = "";
         this.backgrounds.forEach((c)=>elementsInsertionTarget.appendChild(c)
@@ -340,33 +337,35 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         this.petals.forEach((petalArray, i)=>{
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
             elementsInsertionTarget.appendChild(g);
-            g.setAttribute("fill", `url(#petal${this.flowerID}-Gradient-${i})`);
-            g.id = `petalGroup${this.flowerID}-${i}`;
-            g.classList.add(`petalStyles${this.flowerID}-${i}`);
+            g.setAttribute("fill", `url(#petal${this.id}-Gradient-${i})`);
+            g.id = `petalGroup${this.id}-${i}`;
+            g.classList.add(`petalStyles${this.id}-${i}`);
             petalArray.forEach((petal)=>g.appendChild(petal.element)
             );
         });
         this.center.forEach((arrangement, i)=>{
             const baseG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            baseG.setAttribute("fill", `url(#centerBase${this.flowerID}-Gradient-${i})`);
-            baseG.id = `centerBaseGroup${this.flowerID}-${i}`;
+            baseG.setAttribute("fill", `url(#centerBase${this.id}-Gradient-${i})`);
+            baseG.id = `centerBaseGroup${this.id}-${i}`;
             arrangement.bases.forEach((base)=>{
                 baseG.appendChild(base.element);
             });
-            baseG.classList.add(`centerBaseStyles${this.flowerID}-${i}`);
+            baseG.classList.add(`centerBaseStyles${this.id}-${i}`);
             elementsInsertionTarget.appendChild(baseG);
             const tipG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            tipG.setAttribute("fill", `url(#centerTip${this.flowerID}-Gradient-${i})`);
-            tipG.id = `centerTipGroup${this.flowerID}-${i}`;
+            tipG.setAttribute("fill", `url(#centerTip${this.id}-Gradient-${i})`);
+            tipG.id = `centerTipGroup${this.id}-${i}`;
             arrangement.tips.forEach((tip)=>{
                 tipG.appendChild(tip.element);
             });
-            tipG.classList.add(`centerTipStyles${this.flowerID}-${i}`);
+            tipG.classList.add(`centerTipStyles${this.id}-${i}`);
             elementsInsertionTarget.appendChild(tipG);
         });
-        this.applyStyles();
     }
-    applyStyles() {
+    /**
+	 * Currently update and create are the same function.
+	 * Use this to update only styles. Useful when only file, stroke or gradient is changed
+	 */ updateStyles() {
         let defs = this.svgElement.querySelector("defs");
         defs.innerHTML = "";
         //@ts-ignore this is intended. Container is already an svg element, its style is in the svg NS
@@ -399,7 +398,7 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
 		 */ function createAndApplyRGradient(prefix, id, config, configIndex) {
             const gradient = $2fc098c386365677$var$createRadialGradient(`${prefix}Gradient-${id}`, config);
             let radius;
-            if (prefix == `petal${_this.flowerID}-`) radius = _this.config.center.radius + _this.config.petals[configIndex].geometry.length;
+            if (prefix == `petal${_this.id}-`) radius = _this.config.center.radius + _this.config.petals[configIndex].geometry.length;
             else radius = _this.config.center.arrangement[configIndex].geometry.range[1] * _this.config.center.radius;
             /**
 			 * why 1.5?
@@ -409,59 +408,101 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         }
         this.config.petals.forEach((petalConfig, index)=>{
             const inverseIndex = this.config.petals.length - (index + 1);
-            createAndApplyRGradient(`petal${this.flowerID}-`, inverseIndex, petalConfig.fill.color, index);
-            createAndApplyFilter(`petalShadow${this.flowerID}-${inverseIndex}`, petalConfig.fill.shadow, this.svgElement.querySelector(`#petalGroup${this.flowerID}-${inverseIndex}`));
-            const styleString = `.petalStyles${this.flowerID}-${inverseIndex} {` + `stroke: ${petalConfig.fill.strokeColor};` + `stroke-width: ${petalConfig.fill.strokeWidth};` + "}";
+            createAndApplyRGradient(`petal${this.id}-`, inverseIndex, petalConfig.fill.color, index);
+            createAndApplyFilter(`petalShadow${this.id}-${inverseIndex}`, petalConfig.fill.shadow, this.svgElement.querySelector(`#petalGroup${this.id}-${inverseIndex}`));
+            const styleString = `.petalStyles${this.id}-${inverseIndex} {` + `stroke: ${petalConfig.fill.strokeColor};` + `stroke-width: ${petalConfig.fill.strokeWidth};` + "}";
             styleTag.appendChild(document.createTextNode(styleString));
         });
         this.config.center.arrangement.forEach((arrangement, index)=>{
             const inverseIndex = this.config.center.arrangement.length - (index + 1);
-            createAndApplyRGradient(`centerBase${this.flowerID}-`, inverseIndex, arrangement.fill.base.color, index);
-            createAndApplyRGradient(`centerTip${this.flowerID}-`, inverseIndex, arrangement.fill.tip.color, index);
-            createAndApplyFilter(`centerBaseShadow${this.flowerID}-${inverseIndex}`, arrangement.fill.base.shadow, this.svgElement.querySelector(`#centerBaseGroup${this.flowerID}-${inverseIndex}`), true);
-            createAndApplyFilter(`centerTipShadow${this.flowerID}-${inverseIndex}`, arrangement.fill.tip.shadow, this.svgElement.querySelector(`#centerTipGroup${this.flowerID}-${inverseIndex}`));
-            const styleString = `.centerBaseStyles${this.flowerID}-${inverseIndex} {` + `stroke: ${arrangement.fill.base.strokeColor};` + `stroke-width: ${arrangement.fill.base.strokeWidth};` + "}";
+            createAndApplyRGradient(`centerBase${this.id}-`, inverseIndex, arrangement.fill.base.color, index);
+            createAndApplyRGradient(`centerTip${this.id}-`, inverseIndex, arrangement.fill.tip.color, index);
+            createAndApplyFilter(`centerBaseShadow${this.id}-${inverseIndex}`, arrangement.fill.base.shadow, this.svgElement.querySelector(`#centerBaseGroup${this.id}-${inverseIndex}`), true);
+            createAndApplyFilter(`centerTipShadow${this.id}-${inverseIndex}`, arrangement.fill.tip.shadow, this.svgElement.querySelector(`#centerTipGroup${this.id}-${inverseIndex}`));
+            const styleString = `.centerBaseStyles${this.id}-${inverseIndex} {` + `stroke: ${arrangement.fill.base.strokeColor};` + `stroke-width: ${arrangement.fill.base.strokeWidth};` + "}";
             styleTag.appendChild(document.createTextNode(styleString));
-            const styleString2 = `.centerTipStyles${this.flowerID}-${inverseIndex} {` + `stroke: ${arrangement.fill.tip.strokeColor};` + `stroke-width: ${arrangement.fill.tip.strokeWidth};` + "}";
+            const styleString2 = `.centerTipStyles${this.id}-${inverseIndex} {` + `stroke: ${arrangement.fill.tip.strokeColor};` + `stroke-width: ${arrangement.fill.tip.strokeWidth};` + "}";
             styleTag.appendChild(document.createTextNode(styleString2));
         });
     }
     /**
-	 * @param {boolean} [download] 
-	 * @returns {string}
-	 */ getSVG(download) {
-        this.fitDrawing();
-        const serializer = new XMLSerializer();
-        const svgText = serializer.serializeToString(this.svgElement);
-        if (download) {
-            const xml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>\r\n${svgText}`;
-            $2fc098c386365677$var$DownloadData(xml, "flower", "svg");
-        } else return svgText;
+	 * Updates geometry and styles.
+	 */ update() {
+        this.updateGeometry();
+        this.updateStyles();
     }
     /**
-	 * @param {boolean} download 
-	 * @returns {string}
-	 */ getJSON(download) {
-        const json = JSON.stringify(this.config, null, 2);
-        if (download) $2fc098c386365677$var$DownloadData(json, "flower", "json");
-        else return json;
+	 * By default the flower is drawn in the center of the passed canvas.
+	 * @param {HTMLCanvasElement} canvas
+	 * @param {number} [x] - left position in pixels
+	 * @param {number} [y] - top position in pixels
+	 * @param {number} [w] - width in pixels
+	 * @param {number} [h] - height in pixels
+	 */ renderOnCanvas(canvas, x, y, w, h) {
+        if (canvas && canvas.tagName == "CANVAS") {
+            /**
+			 * @param {number} width
+			 * @param {number} height
+			 */ function updateParams(width, height) {
+                if (typeof w != "number") w = Math.min(width, height);
+                if (typeof h != "number") h = w;
+                if (typeof x != "number") x = (width - w) / 2;
+                if (typeof y != "number") y = (height - h) / 2;
+            }
+            const image = new Image();
+            image.classList.add("svgPreview");
+            image.onload = function() {
+                const ctx = canvas.getContext("2d");
+                updateParams(canvas.width, canvas.height);
+                ctx.drawImage(image, x, y, w, h);
+            };
+            image.src = this.export("imageURL");
+        }
     }
-    fitDrawing() {
+    /**
+	 * @param {"svgString"|"svgFileString"|"imageURL"|"jsonString"} exportType 
+	 * @returns {string}
+	 */ export(exportType) {
+        const xml = new XMLSerializer().serializeToString(this.svgElement);
+        switch(exportType){
+            case "svgString":
+                return xml;
+            case "svgFileString":
+                return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>\r\n${xml}`;
+            case "imageURL":
+                return "data:image/svg+xml; charset=utf8, " + encodeURIComponent(xml);
+            case "jsonString":
+                return JSON.stringify(this.config, null, 2);
+        }
+    }
+    /**
+	 * This is useful sometimes to update the bounds of the svg to correctly contain
+	 * the flower in the container.
+	 */ updateDrawingSize() {
+        const _this = this;
+        this.maxWidth = -Infinity;
+        /**
+		 * @param {VectorBloomPath[]} component 
+		 */ function loopNodes(component) {
+            component.forEach((base)=>{
+                base.nodes.forEach((node)=>{
+                    const magnitude = node.position.magnitude();
+                    if (magnitude > _this.maxWidth) _this.maxWidth = magnitude;
+                });
+            });
+        }
+        if (!this.petals.length) this.center.forEach((arrangmenet)=>loopNodes(arrangmenet.bases)
+        );
+        else this.petals.forEach((petals)=>loopNodes(petals)
+        );
+        this.maxWidth *= 2;
+        this.svgElement.setAttribute("pageWidth", `${this.maxWidth}`);
+        this.svgElement.setAttribute("pageHeight", `${this.maxWidth}`);
+        this.svgElement.setAttribute("width", `${this.maxWidth}px`);
+        this.svgElement.setAttribute("height", `${this.maxWidth}px`);
+        this.svgElement.setAttribute("viewBox", `0 0 ${this.maxWidth} ${this.maxWidth}`);
         const containerGroup = this.svgElement.getElementsByTagName("g")[0];
-        const bBox = containerGroup.getBBox();
-        const width = Math.max(bBox.width, bBox.height);
-        this.drawingWidth = width;
-        this.svgElement.setAttribute("pageWidth", `${width}`);
-        this.svgElement.setAttribute("pageHeight", `${width}`);
-        this.svgElement.setAttribute("viewBox", `0 0 ${width} ${width}`);
-        containerGroup.setAttribute("transform", `translate(${width / 2}, ${width / 2})`);
-    }
-    /**
-	 * @param {number} zoom 
-	 */ zoomDrawing(zoom) {
-        const zoomedWidth = this.drawingWidth * zoom;
-        const difference = (this.drawingWidth - zoomedWidth) / 2;
-        this.svgElement.setAttribute("viewBox", `${difference} ${difference} ${zoomedWidth} ${zoomedWidth}`);
+        containerGroup.setAttribute("transform", `translate(${this.maxWidth / 2}, ${this.maxWidth / 2})`);
     }
     /**
 	 * @param { BloomConfig } config
@@ -473,36 +514,6 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         };
         config.petals.forEach($2fc098c386365677$var$fillPetalDefaults);
         config.center.arrangement.forEach($2fc098c386365677$var$fillCenterDefaults);
-    }
-    /**
-	 * @param {number} index 
-	 */ highlightPetal(index) {
-        index = this.config.petals.length - index - 1;
-        if (index > -1) this.svgElement.querySelector(`#petalGroup${this.flowerID}-${index}`).classList.add("vectorBloomHighlight");
-    }
-    /**
-	 * @param {number} index 
-	 */ unhighlightPetal(index) {
-        index = this.config.petals.length - index - 1;
-        if (index > -1) this.svgElement.querySelector(`#petalGroup${this.flowerID}-${index}`).classList.remove("vectorBloomHighlight");
-    }
-    /**
-	 * @param {number} index 
-	 */ highlightCenter(index) {
-        index = this.config.center.arrangement.length - index - 1;
-        if (index > -1) {
-            this.svgElement.querySelector(`#centerBaseGroup${this.flowerID}-${index}`).classList.add("vectorBloomHighlight");
-            this.svgElement.querySelector(`#centerTipGroup${this.flowerID}-${index}`).classList.add("vectorBloomHighlight");
-        }
-    }
-    /**
-	 * @param {number} index 
-	 */ unhighlightCenter(index) {
-        index = this.config.center.arrangement.length - index - 1;
-        if (index > -1) {
-            this.svgElement.querySelector(`#centerBaseGroup${this.flowerID}-${index}`).classList.remove("vectorBloomHighlight");
-            this.svgElement.querySelector(`#centerTipGroup${this.flowerID}-${index}`).classList.remove("vectorBloomHighlight");
-        }
     }
 }
 /**
@@ -837,18 +848,14 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
     return filter;
 }
 /**
- * @param {number} pageSize
  * @returns {SVGSVGElement}
- */ function $2fc098c386365677$var$createSVGElement(pageSize) {
+ */ function $2fc098c386365677$var$createSVGElement() {
     const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     svgElement.setAttribute("class", "vectorBloomSVG");
     svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svgElement.style.width = "100%";
     svgElement.style.height = "100%";
-    svgElement.setAttribute("pageWidth", pageSize + "");
-    svgElement.setAttribute("pageHeight", pageSize + "");
-    svgElement.setAttribute("viewBox", `0 0 ${pageSize} ${pageSize}`);
     //ensure this is the first element
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defs.classList.add("vectorBloomDefs");
@@ -857,7 +864,6 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
     styleTag.type = "text/css";
     svgElement.appendChild(styleTag);
     const translateGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    translateGroup.setAttribute("transform", `translate(${pageSize / 2},${pageSize / 2})`);
     svgElement.appendChild(translateGroup);
     return svgElement;
 }
@@ -877,51 +883,6 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
     circle.setAttribute("r", config.radius + "");
     circle.setAttribute("fill", config.color);
     return circle;
-}
-/**
- * Will make browser prompt to download a file. 
- * Can be used to download in memory image as file etc.
- * @param {string} data string data of the file
- * @param {string} fileName the filename of the browser downloaded file
- * @param {string} [type] the file mime type
- */ function $2fc098c386365677$var$DownloadData(data, fileName, type) {
-    let mimeType = "text/plain";
-    switch(type){
-        case "json":
-            if (typeof data != "string") data = JSON.stringify(data, null, 2);
-            mimeType = "application/json";
-            break;
-        case "svg":
-            mimeType = "image/svg+xml";
-            break;
-        default:
-            if (typeof data == "string") {
-                if (data.match(/^data:image\/[^;]/)) {
-                    let image_data = atob(data.split(",")[1]);
-                    // Use typed arrays to convert the binary data to a Blob
-                    let arraybuffer = new ArrayBuffer(image_data.length);
-                    let view = new Uint8Array(arraybuffer);
-                    for(let i = 0; i < image_data.length; i++)view[i] = image_data.charCodeAt(i) & 0xff;
-                    data = arraybuffer;
-                    mimeType = "image/png";
-                }
-            }
-            break;
-    }
-    let blob = new Blob([
-        data
-    ], {
-        type: mimeType
-    });
-    let url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    document.body.appendChild(a);
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    setTimeout(()=>document.body.removeChild(a)
-    , 1000);
-    window.URL.revokeObjectURL(url);
 }
 
 

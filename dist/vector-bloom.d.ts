@@ -126,8 +126,13 @@ declare module "vector-bloom-path" {
         constructor(nodes: VectorBloomNode[]);
         nodes: VectorBloomNode[];
         element: SVGPathElement;
-        pathData: void;
-        compilePathData(): void;
+        /**
+         * Call this method whenever updating nodes.
+         * Updates the path attribute (d) on the svg element and assigns it to pathData member
+         * @returns {string}
+         */
+        compilePathData(): string;
+        pathData: string;
     }
     import { VectorBloomPoint } from "vector-bloom-point";
 }
@@ -283,6 +288,10 @@ declare module "vector-bloom" {
         extendOutside?: boolean;
         offsetX?: number;
         offsetY?: number;
+        /**
+         * Introduce random noise in the geometry
+         */
+        jitter?: number;
     };
     export type CenterArrangment = {
         geometry: CenterGeometry;

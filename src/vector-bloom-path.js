@@ -23,9 +23,14 @@ export class VectorBloomPath {
 		this.element = document.createElementNS("http://www.w3.org/2000/svg", "path")
 		this.nodes.forEach((node, index) => node.curveTo = this.nodes[index + 1])
 		this.nodes[this.nodes.length - 1].curveTo = this.nodes[0]
-		this.pathData = this.compilePathData()
+		this.compilePathData()
 	}
 
+	/**
+	 * Call this method whenever updating nodes.
+	 * Updates the path attribute (d) on the svg element and assigns it to pathData member
+	 * @returns {string}
+	 */
 	compilePathData() {
 		/**
 		 * @param {VectorBloomNode} node 
@@ -45,5 +50,7 @@ export class VectorBloomPath {
 		writeData(this.nodes[target])
 		pathString += "Z "
 		this.element.setAttribute("d", pathString)
+		this.pathData = pathString
+		return pathString
 	}
 }

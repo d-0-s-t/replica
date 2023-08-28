@@ -1,4 +1,8 @@
-class $f007ebde6a4d0933$export$29b1dadb55dcfd29 {
+/**
+ * @class VectorBloomPoint
+ * Creates object that holds x and y coordinates of a two dimensional Point.
+ * Provides methods for common operations with the point.
+ */ class $f007ebde6a4d0933$export$29b1dadb55dcfd29 {
     /**
 	 * @param {number} [x]
 	 * @param {number} [y]
@@ -173,10 +177,10 @@ class $a124a4be495d40a7$export$e4c1e9b5fa4cf163 {
 	 * @param {number} x 
 	 * @param {number} y 
 	 */ constructor(x, y){
-        this.position = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(x, y);
-        this.curveTo = null;
-        this.controlPoint1 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(x, y);
-        this.controlPoint2 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(x, y);
+        this.position = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(x, y);
+        this.curveTo = /** @type {VectorBloomNode} */ null;
+        this.controlPoint1 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(x, y);
+        this.controlPoint2 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(x, y);
     }
 }
 class $a124a4be495d40a7$export$49e3432e3d0b046c {
@@ -185,12 +189,15 @@ class $a124a4be495d40a7$export$49e3432e3d0b046c {
 	 */ constructor(nodes){
         this.nodes = nodes;
         this.element = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        this.nodes.forEach((node, index)=>node.curveTo = this.nodes[index + 1]
-        );
+        this.nodes.forEach((node, index)=>node.curveTo = this.nodes[index + 1]);
         this.nodes[this.nodes.length - 1].curveTo = this.nodes[0];
-        this.pathData = this.compilePathData();
+        this.compilePathData();
     }
-    compilePathData() {
+    /**
+	 * Call this method whenever updating nodes.
+	 * Updates the path attribute (d) on the svg element and assigns it to pathData member
+	 * @returns {string}
+	 */ compilePathData() {
         /**
 		 * @param {VectorBloomNode} node 
 		 */ function writeData(node) {
@@ -207,6 +214,8 @@ class $a124a4be495d40a7$export$49e3432e3d0b046c {
         writeData(this.nodes[target]);
         pathString += "Z ";
         this.element.setAttribute("d", pathString);
+        this.pathData = pathString;
+        return pathString;
     }
 }
 
@@ -257,6 +266,7 @@ class $a124a4be495d40a7$export$49e3432e3d0b046c {
  * @property {boolean} [extendOutside] Extend the outer edge of the metal to form a smooth curve
  * @property {number} [offsetX]
  * @property {number} [offsetY]
+ * @property {number} [jitter] Introduce random noise in the geometry
  */ /** 
  * @typedef CenterArrangment
  * @property {CenterGeometry} geometry
@@ -290,9 +300,9 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
 		 * id names and classes.
 		 */ this.id = (Math.random() + "").replace(".", "");
         $2fc098c386365677$export$5a1d4940b51d91ff.FillDefaults(config);
-        this.petals = [];
-        this.center = [];
-        this.backgrounds = [];
+        this.petals = /** @type {VectorBloomPath[][]} */ [];
+        this.center = /** @type {CenterArrangement[]} */ [];
+        this.backgrounds = /** @type {SVGCircleElement[]} */ [];
         this.config = config;
         this.svgElement = $2fc098c386365677$var$createSVGElement();
         this.maxWidth = 100;
@@ -316,8 +326,7 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         this.petals.length = 0;
         this.center.length = 0;
         this.backgrounds.length = 0;
-        this.config.petals.forEach((petalConfig)=>this.petals.unshift($2fc098c386365677$var$createPetals(petalConfig, this.config.center.radius))
-        );
+        this.config.petals.forEach((petalConfig)=>this.petals.unshift($2fc098c386365677$var$createPetals(petalConfig, this.config.center.radius)));
         this.config.center.arrangement.forEach((arrangement)=>{
             this.center.unshift($2fc098c386365677$var$createCenter(arrangement.geometry, this.config.center.radius));
             if (arrangement.fill.background) this.backgrounds.push($2fc098c386365677$var$createCircleElement({
@@ -332,16 +341,14 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         });
         const elementsInsertionTarget = this.svgElement.querySelector("g");
         elementsInsertionTarget.innerHTML = "";
-        this.backgrounds.forEach((c)=>elementsInsertionTarget.appendChild(c)
-        );
+        this.backgrounds.forEach((c)=>elementsInsertionTarget.appendChild(c));
         this.petals.forEach((petalArray, i)=>{
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
             elementsInsertionTarget.appendChild(g);
             g.setAttribute("fill", `url(#petal${this.id}-Gradient-${i})`);
             g.id = `petalGroup${this.id}-${i}`;
             g.classList.add(`petalStyles${this.id}-${i}`);
-            petalArray.forEach((petal)=>g.appendChild(petal.element)
-            );
+            petalArray.forEach((petal)=>g.appendChild(petal.element));
         });
         this.center.forEach((arrangement, i)=>{
             const baseG = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -491,10 +498,8 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
                 });
             });
         }
-        if (!this.petals.length) this.center.forEach((arrangmenet)=>loopNodes(arrangmenet.bases)
-        );
-        else this.petals.forEach((petals)=>loopNodes(petals)
-        );
+        if (!this.petals.length) this.center.forEach((arrangmenet)=>loopNodes(arrangmenet.bases));
+        else this.petals.forEach((petals)=>loopNodes(petals));
         this.maxWidth *= 2;
         this.svgElement.setAttribute("pageWidth", `${this.maxWidth}`);
         this.svgElement.setAttribute("pageHeight", `${this.maxWidth}`);
@@ -533,8 +538,8 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
  * @param {VectorBloomNode} originNode 
  * @param {number} value 
  */ function $2fc098c386365677$var$ApplySmoothing(node, originNode, value) {
-    const workerPoint1 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(0, 0);
-    const workerPoint2 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(0, 0);
+    const workerPoint1 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(0, 0);
+    const workerPoint2 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(0, 0);
     workerPoint1.set(node.position).subtract(originNode.position).normalize();
     workerPoint2.set(node.curveTo.position).subtract(node.position).normalize();
     workerPoint1.add(workerPoint2).normalize();
@@ -622,11 +627,11 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         const currentRadiusRatio = (currentRadius - minRadius) / radiusRange;
         const currentAge = currentRadiusRatio * ageRange + arrangement.age[0];
         const currentSize = currentRadiusRatio * sizeRange + arrangement.size[0];
-        const { base: base , tip: tip  } = $2fc098c386365677$var$createCenterShape(currentRadius, currentAge, currentSize, angle);
+        const { base: base, tip: tip } = $2fc098c386365677$var$createCenterShape(currentRadius, currentAge, currentSize, angle);
         if (base) centerArrangement.bases.push(base);
         if (tip) centerArrangement.tips.push(tip);
         n++;
-    }while (currentRadius < maxRadius)
+    }while (currentRadius < maxRadius);
     return centerArrangement;
 }
 /**
@@ -637,13 +642,13 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
  * @param {number} angle 
  * @returns {{base: VectorBloomPath, tip: VectorBloomPath}}
  */ function $2fc098c386365677$var$createCenterShape(r, age, size, angle) {
-    const workerPoint1 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(0, 0);
-    const workerPoint2 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(0, 0);
-    const workerPoint3 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(0, 0);
-    const workerPoint4 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(0, 0);
+    const workerPoint1 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(0, 0);
+    const workerPoint2 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(0, 0);
+    const workerPoint3 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(0, 0);
+    const workerPoint4 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(0, 0);
     workerPoint1.set(r * Math.sin(angle), r * Math.cos(angle));
-    const baseNodes = [];
-    const tipNodes = [];
+    const baseNodes = /** @type {VectorBloomNode[]} */ [];
+    const tipNodes = /** @type {VectorBloomNode[]} */ [];
     if (age < 0.5) {
         /**
 		 * this shape is a quadrilateral with points in clockwise order start from South
@@ -700,8 +705,8 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
         }
     }
     return {
-        base: baseNodes.length ? new $a124a4be495d40a7$export$49e3432e3d0b046c(baseNodes) : null,
-        tip: tipNodes.length ? new $a124a4be495d40a7$export$49e3432e3d0b046c(tipNodes) : null
+        base: baseNodes.length ? new (0, $a124a4be495d40a7$export$49e3432e3d0b046c)(baseNodes) : null,
+        tip: tipNodes.length ? new (0, $a124a4be495d40a7$export$49e3432e3d0b046c)(tipNodes) : null
     };
 }
 /**
@@ -734,10 +739,10 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
     const widthHalf = $2fc098c386365677$var$ToRadian(petalGeometry.width / 2);
     let extension = 0;
     if (petalGeometry.extendOutside) extension = (centerRadius + petalGeometry.length) * outerWidthHalf;
-    const centerOffset = new $f007ebde6a4d0933$export$29b1dadb55dcfd29(petalGeometry.offsetX || 0, petalGeometry.offsetY || 0);
-    const petalNodes = [];
-    petalNodes.push($2fc098c386365677$var$getRadialNode(offset - innerWidthHalf, centerRadius, centerOffset), $2fc098c386365677$var$getRadialNode(offset, centerRadius - 10, centerOffset), $2fc098c386365677$var$getRadialNode(offset + innerWidthHalf, centerRadius, centerOffset), $2fc098c386365677$var$getRadialNode(offset + widthHalf, centerRadius + petalGeometry.length * petalGeometry.balance, centerOffset), $2fc098c386365677$var$getRadialNode(offset + outerWidthHalf, centerRadius + petalGeometry.length, centerOffset), $2fc098c386365677$var$getRadialNode(offset, centerRadius + petalGeometry.length + extension, centerOffset), $2fc098c386365677$var$getRadialNode(offset - outerWidthHalf, centerRadius + petalGeometry.length, centerOffset), $2fc098c386365677$var$getRadialNode(offset - widthHalf, centerRadius + petalGeometry.length * petalGeometry.balance, centerOffset));
-    const petal = new $a124a4be495d40a7$export$49e3432e3d0b046c(petalNodes);
+    const centerOffset = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)(petalGeometry.offsetX || 0, petalGeometry.offsetY || 0);
+    const petalNodes = /** @type {VectorBloomNode[]}*/ [];
+    petalNodes.push($2fc098c386365677$var$getRadialNode(offset - innerWidthHalf, centerRadius, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset, centerRadius - 10, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset + innerWidthHalf, centerRadius, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset + widthHalf, centerRadius + petalGeometry.length * petalGeometry.balance, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset + outerWidthHalf, centerRadius + petalGeometry.length, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset, centerRadius + petalGeometry.length + extension, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset - outerWidthHalf, centerRadius + petalGeometry.length, centerOffset, null, petalGeometry.jitter), $2fc098c386365677$var$getRadialNode(offset - widthHalf, centerRadius + petalGeometry.length * petalGeometry.balance, centerOffset, null, petalGeometry.jitter));
+    const petal = new (0, $a124a4be495d40a7$export$49e3432e3d0b046c)(petalNodes);
     if (petalGeometry.smoothing) {
         petal.nodes.forEach((node, index)=>{
             const fromNode = index === 0 ? petal.nodes[petal.nodes.length - 1] : petal.nodes[index - 1];
@@ -752,17 +757,22 @@ class $2fc098c386365677$export$5a1d4940b51d91ff {
  * @param {number} distance 
  * @param {VectorBloomPoint} [position] 
  * @param {number} [smoothing]
+ * @param {number} [jitter]
  * @returns {VectorBloomNode}
- */ function $2fc098c386365677$var$getRadialNode(angle, distance, position, smoothing) {
+ */ function $2fc098c386365677$var$getRadialNode(angle, distance, position, smoothing, jitter) {
     let x = Math.sin(angle) * distance;
     let y = Math.cos(angle) * distance;
     if (position) {
         x += position.x;
         y += position.y;
     }
-    const createdNode = new $a124a4be495d40a7$export$e4c1e9b5fa4cf163(x, y);
+    if (jitter) {
+        x += (Math.random() - 0.5) * jitter;
+        y += (Math.random() - 0.5) * jitter;
+    }
+    const createdNode = new (0, $a124a4be495d40a7$export$e4c1e9b5fa4cf163)(x, y);
     if (smoothing) {
-        const workerPoint1 = new $f007ebde6a4d0933$export$29b1dadb55dcfd29();
+        const workerPoint1 = new (0, $f007ebde6a4d0933$export$29b1dadb55dcfd29)();
         workerPoint1.set(createdNode.position).subtract(position);
         $2fc098c386365677$var$makePerpendicular(workerPoint1);
         createdNode.controlPoint1.set(workerPoint1.scale(smoothing)).add(createdNode.position);

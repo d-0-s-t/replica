@@ -59,6 +59,7 @@ import { VectorBloomPath, VectorBloomNode } from "./vector-bloom-path.js"
  * @property {boolean} [extendOutside] Extend the outer edge of the metal to form a smooth curve
  * @property {number} [offsetX]
  * @property {number} [offsetY]
+ * @property {number} [jitter] Introduce random noise in the geometry
  */
 
 /** 
@@ -335,7 +336,7 @@ export class VectorBloom {
 	 * @param {"svgString"|"svgFileString"|"imageURL"|"jsonString"} exportType 
 	 * @returns {string}
 	 */
-	export (exportType) {
+	export(exportType) {
 		const xml = new XMLSerializer().serializeToString(this.svgElement)
 		switch (exportType) {
 			case "svgString":
@@ -390,7 +391,7 @@ export class VectorBloom {
 		this.svgElement.setAttribute("viewBox", `0 0 ${this.maxWidth} ${this.maxWidth}`)
 
 		const containerGroup = this.svgElement.getElementsByTagName("g")[0]
-		containerGroup.setAttribute("transform", `translate(${this.maxWidth/2}, ${this.maxWidth/2})`)
+		containerGroup.setAttribute("transform", `translate(${this.maxWidth / 2}, ${this.maxWidth / 2})`)
 	}
 
 	/**
@@ -679,24 +680,22 @@ function createPetal(petalGeometry, centerRadius, offset) {
 	const innerWidthHalf = ToRadian(petalGeometry.innerWidth / 2)
 	const outerWidthHalf = ToRadian(petalGeometry.outerWidth / 2)
 	const widthHalf = ToRadian(petalGeometry.width / 2)
-
 	let extension = 0
 	if (petalGeometry.extendOutside)
 		extension = (centerRadius + petalGeometry.length) * outerWidthHalf
 
 	const centerOffset = new VectorBloomPoint(petalGeometry.offsetX || 0, petalGeometry.offsetY || 0)
 
-
 	const petalNodes = /** @type {VectorBloomNode[]}*/ ([])
 	petalNodes.push(
-		getRadialNode(offset - innerWidthHalf, centerRadius, centerOffset),
-		getRadialNode(offset, centerRadius - 10, centerOffset),
-		getRadialNode(offset + innerWidthHalf, centerRadius, centerOffset),
-		getRadialNode(offset + widthHalf, centerRadius + (petalGeometry.length * petalGeometry.balance), centerOffset),
-		getRadialNode(offset + outerWidthHalf, centerRadius + petalGeometry.length, centerOffset),
-		getRadialNode(offset, centerRadius + petalGeometry.length + extension, centerOffset),
-		getRadialNode(offset - outerWidthHalf, centerRadius + petalGeometry.length, centerOffset),
-		getRadialNode(offset - widthHalf, centerRadius + (petalGeometry.length * petalGeometry.balance), centerOffset)
+		getRadialNode(offset - innerWidthHalf, centerRadius, centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset, centerRadius - 10, centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset + innerWidthHalf, centerRadius, centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset + widthHalf, centerRadius + (petalGeometry.length * petalGeometry.balance), centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset + outerWidthHalf, centerRadius + petalGeometry.length, centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset, centerRadius + petalGeometry.length + extension, centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset - outerWidthHalf, centerRadius + petalGeometry.length, centerOffset, null, petalGeometry.jitter),
+		getRadialNode(offset - widthHalf, centerRadius + (petalGeometry.length * petalGeometry.balance), centerOffset, null, petalGeometry.jitter)
 	)
 	const petal = new VectorBloomPath(petalNodes)
 	if (petalGeometry.smoothing) {
@@ -716,14 +715,19 @@ function createPetal(petalGeometry, centerRadius, offset) {
  * @param {number} distance 
  * @param {VectorBloomPoint} [position] 
  * @param {number} [smoothing]
+ * @param {number} [jitter]
  * @returns {VectorBloomNode}
  */
-function getRadialNode(angle, distance, position, smoothing) {
+function getRadialNode(angle, distance, position, smoothing, jitter) {
 	let x = Math.sin(angle) * distance
 	let y = Math.cos(angle) * distance
 	if (position) {
 		x += position.x
 		y += position.y
+	}
+	if (jitter) {
+		x += (Math.random() - 0.5) * jitter
+		y += (Math.random() - 0.5) * jitter
 	}
 	const createdNode = new VectorBloomNode(x, y)
 	if (smoothing) {

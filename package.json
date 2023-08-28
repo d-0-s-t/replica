@@ -1,6 +1,6 @@
 {
 	"name": "vector-bloom",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"source": "src/vector-bloom.js",
 	"main": "dist/vector-bloom.js",
 	"module": "dist/vector-bloom.module.js",
@@ -23,7 +23,7 @@
 		"type": "git",
 		"url": "https://github.com/d-0-s-t/vector-bloom.git"
 	},
-	"homepage": "d0st.me/art/flowers",
+	"homepage": "https://www.d0st.me/art/flowers",
 	"eslintConfig": {
 		"extends": [
 			"eslint:recommended",
@@ -92,7 +92,8 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"eslint": "^8.14.0",
-		"parcel": "^2.5.0"
+		"eslint": "^8.48.0",
+		"eslint-plugin-jsdoc": "^46.5.0",
+		"parcel": "^2.9.3"
 	}
 }
